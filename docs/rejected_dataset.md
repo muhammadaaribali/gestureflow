@@ -1,0 +1,5 @@
+- 256x256 PNG images in 8 folders (fist, five, okay, peace, rad, straight, thumbs, none), already split into train/validation/test.
+- The images are white hand silhouettes on a black background, with no skin tone, shading or finger detail.
+- Test 1: MediaPipe Hand Landmarker (image mode, default settings) on all 15,998 images -> 0 hands detected.
+- Test 2: 20 images per class (7 hand classes, 140 images) under three settings: original image (confidence 0.5), enlarged and padded (0.5), enlarged and padded (0.1) -> 0/20 detected in every class and every setting.
+- Conclusion: the detector needs real photos, so silhouettes can't be used for landmark extraction. The dataset was rejected and replaced by the Zenodo landmark dataset (record 20032888).
