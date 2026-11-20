@@ -1,0 +1,6 @@
+,Open,Close,Pointer,Ok,Nice
+Open,600,0,0,0,0
+Close,0,600,0,0,0
+Pointer,0,0,599,0,1
+Ok,10,0,0,590,0
+Nice,0,0,1,0,531
