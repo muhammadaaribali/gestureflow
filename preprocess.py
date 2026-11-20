@@ -53,8 +53,9 @@ print(f"avg difference, random same-gesture:  {random_diff:.4f}")
 # 6. Chunked train/test split, done separately inside each gesture
 train_parts, test_parts = [], []
 for label in sorted(df["label"].unique()):
-    block = df[df["label"] == label]              # still in time order
+    block = df[df["label"] == label].copy()              # still in time order
     chunk_ids = np.arange(len(block)) // CHUNK
+    block["group"] = [f"{label}_{chunk}" for chunk in chunk_ids]
     chunks = np.unique(chunk_ids)
     n_test = max(1, round(len(chunks) * TEST_FRACTION))
     test_chunks = rng.choice(chunks, size=n_test, replace=False)
@@ -70,6 +71,10 @@ print("train per gesture:", train["label"].value_counts().sort_index().to_dict()
 print("test per gesture: ", test["label"].value_counts().sort_index().to_dict())
 
 os.makedirs("data/processed", exist_ok=True)
+train_groups = train.pop("group")
+test_groups = test.pop("group")
+assert set(train_groups).isdisjoint(test_groups)
+train_groups.to_csv("data/processed/train_groups.csv", index=False)
 train.to_csv("data/processed/train.csv", index=False)
 test.to_csv("data/processed/test.csv", index=False)
 print("\nSaved data/processed/train.csv and test.csv")
