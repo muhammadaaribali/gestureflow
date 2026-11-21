@@ -28,17 +28,39 @@ def make_system_backend(volume_step=3):
         commands.update(volume_up=master + [step + "+"],
                         volume_down=master + [step + "-"], mute=master + ["toggle"])
 
+    last_player = None
+
     def backend(action):
+        nonlocal last_player
         command = commands.get(action)
         if command is None:
             print(f"[NO TOOL] {action}", flush=True)
             return False
         try:
+            if command[0] == "playerctl":
+                result = subprocess.run(
+                    ["playerctl", "-a", "status", "-f", "{{playerInstance}} {{status}}"],
+                    check=True, capture_output=True, text=True, timeout=1,
+                )
+                players = dict(line.rsplit(" ", 1) for line in result.stdout.splitlines() if " " in line)
+                if not players:
+                    print("[NO PLAYER] Start a video or song first.", flush=True)
+                    return False
+                # Follow playback. Keep the same player when a gesture pauses it.
+                def priority(player):
+                    return (players[player] == "Playing", players[player] == "Paused",
+                            player == last_player)
+
+                target = max(players, key=priority)
+                command = ["playerctl", "-p", target, command[1]]
             subprocess.run(command, check=True, timeout=1, capture_output=True)
+            if command[0] == "playerctl":
+                last_player = target
         except (OSError, subprocess.SubprocessError) as error:
             print(f"[FAILED] {action}: {error}", flush=True)
             return False
-        print(f"[OK] {action}", flush=True)
+        destination = f" ({last_player})" if command[0] == "playerctl" else ""
+        print(f"[OK] {action}{destination}", flush=True)
         return True
 
     return backend, {action: cmd[0] for action, cmd in commands.items()}
