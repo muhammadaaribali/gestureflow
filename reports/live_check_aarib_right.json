@@ -1,0 +1,154 @@
+{
+  "person": "aarib",
+  "hand": "right",
+  "seconds_per_gesture": 15,
+  "camera": {
+    "width": 640,
+    "height": 480,
+    "approx_fps": 30.5
+  },
+  "date": "2026-11-22 00:56:38",
+  "overall_frame_accuracy_pct": 80.03,
+  "segments": [
+    {
+      "gesture": "OPEN",
+      "target": "Open",
+      "frames_total": 458,
+      "frames_with_hand": 458,
+      "hand_detected_pct": 100.0,
+      "predicted_counts": {
+        "Open": 458
+      },
+      "mean_confidence": 0.9991398222177807,
+      "triggers": {
+        "Open": 1
+      },
+      "frame_accuracy_pct": 100.0,
+      "correct_triggers": 1,
+      "wrong_triggers": 0
+    },
+    {
+      "gesture": "CLOSE",
+      "target": "Close",
+      "frames_total": 457,
+      "frames_with_hand": 457,
+      "hand_detected_pct": 100.0,
+      "predicted_counts": {
+        "Open": 457
+      },
+      "mean_confidence": 0.8848208505903025,
+      "triggers": {
+        "Open": 2
+      },
+      "frame_accuracy_pct": 0.0,
+      "correct_triggers": 0,
+      "wrong_triggers": 2
+    },
+    {
+      "gesture": "POINTER",
+      "target": "Pointer",
+      "frames_total": 458,
+      "frames_with_hand": 458,
+      "hand_detected_pct": 100.0,
+      "predicted_counts": {
+        "Pointer": 458
+      },
+      "mean_confidence": 0.999916255194338,
+      "triggers": {
+        "Pointer": 1
+      },
+      "frame_accuracy_pct": 100.0,
+      "correct_triggers": 1,
+      "wrong_triggers": 0
+    },
+    {
+      "gesture": "OK",
+      "target": "Ok",
+      "frames_total": 458,
+      "frames_with_hand": 458,
+      "hand_detected_pct": 100.0,
+      "predicted_counts": {
+        "Ok": 458
+      },
+      "mean_confidence": 0.999726023798203,
+      "triggers": {
+        "Ok": 1
+      },
+      "frame_accuracy_pct": 100.0,
+      "correct_triggers": 1,
+      "wrong_triggers": 0
+    },
+    {
+      "gesture": "NICE",
+      "target": "Nice",
+      "frames_total": 457,
+      "frames_with_hand": 457,
+      "hand_detected_pct": 100.0,
+      "predicted_counts": {
+        "Nice": 457
+      },
+      "mean_confidence": 0.9999989271518585,
+      "triggers": {
+        "Nice": 1
+      },
+      "frame_accuracy_pct": 100.0,
+      "correct_triggers": 1,
+      "wrong_triggers": 0
+    },
+    {
+      "gesture": "IDLE",
+      "target": null,
+      "frames_total": 457,
+      "frames_with_hand": 457,
+      "hand_detected_pct": 100.0,
+      "predicted_counts": {
+        "Pointer": 181,
+        "Close": 218,
+        "Ok": 58
+      },
+      "mean_confidence": 0.7546106867377119,
+      "triggers": {
+        "Pointer": 2,
+        "Close": 1
+      },
+      "false_triggers": 3
+    }
+  ],
+  "confusion_pct": {
+    "Open": {
+      "Open": 100.0,
+      "Close": 100.0,
+      "Pointer": 0.0,
+      "Ok": 0.0,
+      "Nice": 0.0
+    },
+    "Close": {
+      "Open": 0.0,
+      "Close": 0.0,
+      "Pointer": 0.0,
+      "Ok": 0.0,
+      "Nice": 0.0
+    },
+    "Pointer": {
+      "Open": 0.0,
+      "Close": 0.0,
+      "Pointer": 100.0,
+      "Ok": 0.0,
+      "Nice": 0.0
+    },
+    "Ok": {
+      "Open": 0.0,
+      "Close": 0.0,
+      "Pointer": 0.0,
+      "Ok": 100.0,
+      "Nice": 0.0
+    },
+    "Nice": {
+      "Open": 0.0,
+      "Close": 0.0,
+      "Pointer": 0.0,
+      "Ok": 0.0,
+      "Nice": 100.0
+    }
+  }
+}
