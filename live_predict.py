@@ -8,7 +8,6 @@ import pandas as pd
 from features import landmarks_to_features
 
 LABELS = ["Open", "Close", "Pointer", "Ok", "Nice"]
-TRAINED_ON = "Right"  # Detected side that uses the original selfie-view features.
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 model = joblib.load("models/best_model.joblib")
@@ -34,7 +33,6 @@ options = HandLandmarkerOptions(
 )
 
 cap = cv2.VideoCapture(0)
-auto_mirror = True
 mirror = False
 timestamp_ms = 0
 last_time = time.time()
@@ -55,21 +53,14 @@ with HandLandmarker.create_from_options(options) as landmarker:
         result = landmarker.detect_for_video(mp_image, timestamp_ms)
 
         title = "no hand"
-        side = "-"
         probs = None
         if result.hand_landmarks:
             hand = result.hand_landmarks[0]
-            if result.handedness and result.handedness[0]:
-                side = result.handedness[0][0].category_name
-            if auto_mirror and side in ("Left", "Right"):
-                mirror = side != TRAINED_ON
             for lm in hand:
                 cv2.circle(frame, (int(lm.x * w), int(lm.y * h)), 4, (0, 0, 255), -1)
 
             feats = landmarks_to_features(hand, w, h, mirror=mirror)
-            if auto_mirror and side not in ("Left", "Right"):
-                title = "hand side unknown"
-            elif feats is not None:
+            if feats is not None:
                 probs = predict_proba(feats)
 
         if probs is not None:
@@ -86,21 +77,17 @@ with HandLandmarker.create_from_options(options) as landmarker:
         last_time = now
 
         cv2.putText(frame, title, (10, 40), FONT, 1.1, (0, 255, 0), 2)
-        mode = "AUTO" if auto_mirror else "MANUAL"
-        applied = ("yes" if mirror else "no") if probs is not None else "-"
-        status = f"{mode} | hand: {side} | mirror used: {applied} | {w}x{h} | {fps:.0f} fps"
+        setting = "Left hand | mirror ON" if mirror else "Right hand | mirror OFF"
+        status = f"Selected: {setting} | {w}x{h} | {fps:.0f} fps"
         cv2.putText(frame, status, (10, 70), FONT, 0.5, (255, 255, 255), 1)
-        cv2.putText(frame, "a: auto/manual   m: flip manually   q: quit",
+        cv2.putText(frame, "m: switch hand   q: quit",
                     (10, h - 12), FONT, 0.5, (255, 255, 255), 1)
 
         cv2.imshow("GestureFlow - live prediction", frame)
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             break
-        elif key == ord("a"):
-            auto_mirror = not auto_mirror
         elif key == ord("m"):
-            auto_mirror = False
             mirror = not mirror
 
 cap.release()
