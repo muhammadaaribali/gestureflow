@@ -22,8 +22,9 @@ ul{padding-left:20px;margin:6px 0}.muted{color:#b6c4d1}@media(max-width:760px){m
 <input id="photo" type="file" accept="image/*" aria-label="Hand photo"><button id="predict">Predict</button><p role="status" id="result"></p></article></section>
 <section><article><h2>Current gesture</h2><strong id="stable">—</strong><p id="raw">No hand</p>
 {% for label in labels %}<div class="row"><label for="bar-{{label}}">{{label}}</label><progress id="bar-{{label}}" max="100" value="0"></progress><span id="pct-{{label}}">0%</span></div>{% endfor %}</article>
-<article><h2>Controls</h2><label><input type="checkbox" id="enabled"> Media control</label><label><input type="checkbox" disabled> LIVE (unavailable)</label>
+<article><h2>Controls</h2><label><input type="checkbox" id="enabled"> Media control</label><label><input type="checkbox" id="live" disabled> LIVE <span id="live-note"></span></label>
 <fieldset><legend>Hand</legend>{% for side in ['right','left'] %}<label><input type="radio" name="hand" value="{{side}}" {% if side=='right' %}checked{% endif %}> {{side|capitalize}}</label>{% endfor %}</fieldset>
+<label for="player">Media player</label><select id="player"></select> <button id="refresh-players" type="button" aria-label="Refresh media players">↻</button>
 <p class="muted">Dry run logs the action each gesture would perform.</p></article>
 <article><h2>Gesture mapping</h2><ul>{% for g,a in mapping.items() %}<li>{{g}} → {{(a or 'no action')|replace('_',' ')}}</li>{% endfor %}</ul></article>
 <article><h2>Action log</h2><ul id="log"><li>No actions yet</li></ul></article></section></main>
@@ -39,6 +40,9 @@ function render(s) {
     el('bar-'+label).value=pct;
     el('pct-'+label).textContent=pct+'%';
   }
+  el('live').checked=s.live;
+  el('live').disabled=!s.live_available;
+  el('live-note').textContent=s.live_available ? '' : '(no control tools found)';
   el('enabled').checked=s.control_enabled;
   document.querySelector('input[value="'+s.hand+'"]').checked=true;
   const entries=s.actions.map(a => a.time+' · '+a.gesture+' → '+a.action.replaceAll('_',' ')+' ('+a.mode+')');
@@ -55,6 +59,16 @@ async function update(body) {
   const r=await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(r.ok) render(await r.json());
 }
+async function loadPlayers() {
+  const {players,selected}=await (await fetch('/api/players')).json();
+  const names=new Set(['', ...players, selected]);
+  el('player').replaceChildren(...Array.from(names, name=>new Option(name || 'automatic',name)));
+  el('player').value=selected;
+}
+el('refresh-players').onclick=loadPlayers;
+el('player').onchange=e=>update({player:e.target.value});
+el('live').onchange=e=>update({live:e.target.checked});
+loadPlayers();
 el('enabled').onchange=e=>update({enabled:e.target.checked});
 document.querySelectorAll('[name=hand]').forEach(r=>r.onchange=()=>update({hand:r.value}));
 el('predict').onclick=async()=>{

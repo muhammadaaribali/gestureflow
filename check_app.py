@@ -3,7 +3,7 @@ import io
 import cv2
 import numpy as np
 
-from app import app
+from app import app, worker
 
 client = app.test_client()
 
@@ -20,7 +20,16 @@ check("state fields", {"stable", "gesture", "control_enabled", "live", "hand", "
 check("starts OFF, dry run, right hand", not state["control_enabled"] and not state["live"] and state["hand"] == "right")
 state = client.post("/api/control", json={"enabled": True, "hand": "left"}).get_json()
 check("control settings change", state["control_enabled"] and state["hand"] == "left")
-check("LIVE refused in dry-run build", client.post("/api/control", json={"live": True}).status_code == 400)
+r = client.post("/api/control", json={"live": True})
+check("LIVE is accepted only when system tools exist", r.status_code == (200 if worker.tools else 400))
+client.post("/api/control", json={"live": False})
+r = client.get("/api/players")
+check("/api/players returns a list", r.status_code == 200 and isinstance(r.json["players"], list))
+r = client.post("/api/control", json={"player": "--help"})
+check("player names that look like options are rejected", r.status_code == 400)
+client.post("/api/control", json={"player": ""})
+r = client.post("/api/control", json={"player": "spotify"})
+check("player can be selected", r.json["player"] == "spotify")
 check("invalid hand rejected", client.post("/api/control", json={"hand": "middle"}).status_code == 400)
 client.post("/api/control", json={"enabled": False, "hand": "right"})
 blank = cv2.imencode(".jpg", np.zeros((240, 320, 3), np.uint8))[1].tobytes()

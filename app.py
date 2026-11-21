@@ -1,5 +1,6 @@
-"""Local, dry-run GestureFlow dashboard."""
+"""Local GestureFlow dashboard."""
 import json
+import re
 import threading
 import time
 from collections import deque
@@ -13,6 +14,7 @@ import pandas as pd
 from flask import Flask, Response, jsonify, render_template, request
 
 from actions import ActionController, dry_run_backend
+from backends import available_players, make_system_backend
 from features import landmarks_to_features
 from smoothing import GestureStabilizer
 
@@ -23,6 +25,13 @@ model = joblib.load(ROOT / "models/best_model.joblib")
 vision = mp.tasks.vision
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024
+
+
+PLAYER_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+def build_live_backend(player):
+    return make_system_backend(cfg.get("volume_step_percent", 3), player=player or None)
 
 
 def detector(mode):
@@ -68,14 +77,17 @@ class CameraWorker(threading.Thread):
         self.stabilizer = GestureStabilizer()
         self.controller = ActionController(cfg["mapping"], dry_run_backend,
                                            cfg["cooldown_seconds"], cfg["repeat_interval_seconds"])
-        self.controller.log = deque(maxlen=20)
+        self.live = False
+        self.player = cfg.get("preferred_player", "spotify")
+        self.live_backend, self.tools = build_live_backend(self.player)
+        self.actions = deque(maxlen=20)
 
     def snapshot(self):
         with self.lock:
             actions = [dict(time=time.strftime("%H:%M:%S", time.localtime(t)), gesture=g,
-                            action=a, mode="dry run") for t, g, a in reversed(self.controller.log)]
-            return dict(self.state, hand=self.hand, actions=actions, live=False,
-                        live_available=False, control_enabled=self.controller.enabled)
+                            action=a, mode=mode) for t, g, a, mode in reversed(self.actions)]
+            return dict(self.state, hand=self.hand, actions=actions, live=self.live, player=self.player,
+                        live_available=bool(self.tools), control_enabled=self.controller.enabled)
 
     def run(self):
         cap = cv2.VideoCapture(0)
@@ -100,7 +112,9 @@ class CameraWorker(threading.Thread):
                         info = prediction(hand, frame, self.hand) if hand else {}
                         label, conf = info.get("gesture"), info.get("confidence", 0)
                         stable, trigger = self.stabilizer.update(label, conf, now)
-                        self.controller.update(stable, trigger, time.time())
+                        if self.controller.update(stable, trigger, time.time()):
+                            event = self.controller.log.pop()
+                            self.actions.append((*event, "LIVE" if self.live else "dry run"))
                         fps = 0.9*fps + 0.1/max(now-last, 0.000001)
                         last = now
                         cv2.putText(frame, stable or "-", (10, 40), cv2.FONT_HERSHEY_SIMPLEX,
@@ -150,16 +164,35 @@ def control():
         return jsonify(error="Choose right or left"), 400
     if any(type(data[k]) is not bool for k in ("live", "enabled") if k in data):
         return jsonify(error="Control switches require true or false"), 400
-    if data.get("live"):
-        return jsonify(error="Live control is unavailable in Step 20a"), 400
+    if "player" in data:
+        player = data["player"]
+        if not isinstance(player, str) or (player and not PLAYER_RE.fullmatch(player)):
+            return jsonify(error="Invalid player name"), 400
     with worker.lock:
+        player = data.get("player", worker.player)
+        live = data.get("live", worker.live)
+        backend, tools = (worker.live_backend, worker.tools)
+        if player != worker.player:
+            backend, tools = build_live_backend(player)
+        if live and not tools:
+            return jsonify(error="No system control tools found"), 400
+        changed = player != worker.player or live != worker.live
+        worker.player, worker.live_backend, worker.tools = player, backend, tools
+        worker.live = live
+        worker.controller.backend = backend if live else dry_run_backend
         hand = data.get("hand", worker.hand)
         enabled = data.get("enabled", worker.controller.enabled)
-        if hand != worker.hand or enabled != worker.controller.enabled:
+        if changed or hand != worker.hand or enabled != worker.controller.enabled:
             worker.stabilizer = GestureStabilizer()
+            worker.controller.last_fired.clear()
             worker.state["stable"] = None
         worker.hand, worker.controller.enabled = hand, enabled
         return jsonify(worker.snapshot())
+
+
+@app.get("/api/players")
+def api_players():
+    return jsonify(players=available_players(), selected=worker.player or "")
 
 
 @app.post("/api/predict")
