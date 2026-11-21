@@ -7,5 +7,6 @@
     "Ok": "volume_down"
   },
   "cooldown_seconds": 1.5,
-  "repeat_interval_seconds": 0.3
+  "repeat_interval_seconds": 0.3,
+  "volume_step_percent": 3
 }

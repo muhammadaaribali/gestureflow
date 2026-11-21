@@ -7,6 +7,7 @@ import mediapipe as mp
 import pandas as pd
 
 from actions import ActionController, dry_run_backend
+from backends import make_system_backend
 from features import landmarks_to_features
 from smoothing import GestureStabilizer
 
@@ -42,6 +43,9 @@ with open("config.json") as config_file:
 controller = ActionController(cfg["mapping"], dry_run_backend,
                               cooldown=cfg["cooldown_seconds"],
                               repeat_interval=cfg["repeat_interval_seconds"])
+system_backend, tools = make_system_backend(cfg.get("volume_step_percent", 3))
+print("System tools:", tools, flush=True)
+live = False
 mirror = False
 timestamp_ms = 0
 last_time = time.monotonic()
@@ -88,7 +92,8 @@ with HandLandmarker.create_from_options(options) as landmarker:
         if triggered:
             print(f"TRIGGER: {active}", flush=True)
         controller.update(active, triggered, now)
-        state = "ON (dry run)" if controller.enabled else "OFF"
+        mode = "LIVE" if live else "dry run"
+        state = f"ON ({mode})" if controller.enabled else "OFF"
         cv2.putText(frame, f"CONTROL: {state}", (10, h - 40), FONT, 0.6, (0, 165, 255), 2)
         cv2.putText(frame, f"STABLE: {active or '-'}", (w - 260, 40),
                     FONT, 0.9, (0, 255, 255), 2)
@@ -99,7 +104,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
         setting = "Left hand | mirror ON" if mirror else "Right hand | mirror OFF"
         status = f"Selected: {setting} | {w}x{h} | {fps:.0f} fps"
         cv2.putText(frame, status, (10, 70), FONT, 0.5, (255, 255, 255), 1)
-        cv2.putText(frame, "m: switch hand   c: toggle control   q: quit",
+        cv2.putText(frame, "m: switch hand   c: control   d: live/dry run   q: quit",
                     (10, h - 12), FONT, 0.5, (255, 255, 255), 1)
 
         cv2.imshow("GestureFlow - live prediction", frame)
@@ -109,6 +114,11 @@ with HandLandmarker.create_from_options(options) as landmarker:
         elif key == ord("c"):
             controller.enabled = not controller.enabled
             stabilizer = GestureStabilizer()
+        elif key == ord("d"):
+            live = not live
+            controller.backend = system_backend if live else dry_run_backend
+            stabilizer = GestureStabilizer()
+            print("LIVE system control" if live else "Dry run", flush=True)
         elif key == ord("m"):
             mirror = not mirror
             stabilizer = GestureStabilizer()
