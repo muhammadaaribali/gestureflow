@@ -48,26 +48,29 @@ def make_system_backend(volume_step=3, player=None):
             return False
         try:
             if command[0] == "playerctl":
-                result = subprocess.run(
-                    ["playerctl", "-a", "status", "-f", "{{playerInstance}} {{status}}"],
-                    check=True, capture_output=True, text=True, timeout=1,
-                )
-                players = dict(line.rsplit(" ", 1) for line in result.stdout.splitlines() if " " in line)
-                if not players:
-                    print("[NO PLAYER] Start a video or song first.", flush=True)
-                    return False
-                # Follow playback. Keep the same player when a gesture pauses it.
-                def priority(player):
-                    return (players[player] == "Playing", players[player] == "Paused",
-                            player == last_player)
+                target = player
+                if target is None:
+                    result = subprocess.run(
+                        ["playerctl", "-a", "status", "-f", "{{playerInstance}} {{status}}"],
+                        check=True, capture_output=True, text=True, timeout=1,
+                    )
+                    players = dict(line.rsplit(" ", 1) for line in result.stdout.splitlines() if " " in line)
+                    if not players:
+                        print("[NO PLAYER] Start a video or song first.", flush=True)
+                        return False
+                    # Follow playback. Keep the same player when a gesture pauses it.
+                    def priority(player):
+                        return (players[player] == "Playing", players[player] == "Paused",
+                                player == last_player)
 
-                target = player or max(players, key=priority)
-                if target not in players:
-                    print(f"[NO PLAYER] {target} is unavailable", flush=True)
-                    return False
+                    target = max(players, key=priority)
                 operation = command[1]
                 if action == "play_pause":
-                    operation = "pause" if players[target] == "Playing" else "play"
+                    previous = subprocess.check_output(
+                        ["playerctl", "-p", target, "status"], text=True,
+                        stderr=subprocess.PIPE, timeout=1,
+                    ).strip()
+                    operation = "pause" if previous == "Playing" else "play"
                 command = ["playerctl", "-p", target, operation]
             subprocess.run(command, check=True, timeout=1, capture_output=True)
             if command[0] == "playerctl":
@@ -83,10 +86,15 @@ def make_system_backend(volume_step=3, player=None):
                     else:
                         print(f"[FAILED] {target} reported {status}, expected {expected}", flush=True)
                         return False
-                    print(f"{target}: {players[target]} -> {status}", flush=True)
+                    print(f"{target}: {previous} -> {status}", flush=True)
                 last_player = target
         except (OSError, subprocess.SubprocessError) as error:
+            detail = getattr(error, "stderr", None)
+            if isinstance(detail, bytes):
+                detail = detail.decode(errors="replace")
             print(f"[FAILED] {action}: {error}", flush=True)
+            if detail:
+                print(detail.strip(), flush=True)
             return False
         destination = f" ({last_player})" if command[0] == "playerctl" else ""
         print(f"[OK] {action}{destination}", flush=True)
