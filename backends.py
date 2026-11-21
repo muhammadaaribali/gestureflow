@@ -4,6 +4,15 @@ import subprocess
 import time
 
 
+def available_players():
+    try:
+        result = subprocess.run(["playerctl", "-l"], capture_output=True,
+                                text=True, timeout=1, check=True)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return result.stdout.splitlines()
+
+
 def make_system_backend(volume_step=3, player=None):
     if not isinstance(volume_step, int) or not 1 <= volume_step <= 100:
         raise ValueError("volume_step_percent must be an integer from 1 to 100")

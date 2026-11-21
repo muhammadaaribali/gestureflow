@@ -8,7 +8,7 @@ import mediapipe as mp
 import pandas as pd
 
 from actions import ActionController, dry_run_backend
-from backends import make_system_backend
+from backends import available_players, make_system_backend
 from features import landmarks_to_features
 from smoothing import GestureStabilizer
 
@@ -48,7 +48,10 @@ with open("config.json") as config_file:
 controller = ActionController(cfg["mapping"], dry_run_backend,
                               cooldown=cfg["cooldown_seconds"],
                               repeat_interval=cfg["repeat_interval_seconds"])
-system_backend, tools = make_system_backend(cfg.get("volume_step_percent", 3), player=args.player)
+player = args.player or cfg.get("preferred_player")
+volume_step = cfg.get("volume_step_percent", 3)
+system_backend, tools = make_system_backend(volume_step, player=player)
+print("Media player:", player or "auto", flush=True)
 print("System tools:", tools, flush=True)
 live = False
 mirror = False
@@ -99,7 +102,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
         controller.update(active, triggered, now)
         mode = "LIVE" if live else "dry run"
         state = f"ON ({mode})" if controller.enabled else "OFF"
-        cv2.putText(frame, f"CONTROL: {state} | player: {args.player or 'auto'}", (10, h - 40), FONT, 0.6, (0, 165, 255), 2)
+        cv2.putText(frame, f"CONTROL: {state} | player: {player or 'auto'}", (10, h - 40), FONT, 0.6, (0, 165, 255), 2)
         cv2.putText(frame, f"STABLE: {active or '-'}", (w - 260, 40),
                     FONT, 0.9, (0, 255, 255), 2)
         fps = 0.9 * fps + 0.1 / max(now - last_time, 1e-6)
@@ -109,7 +112,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
         setting = "Left hand | mirror ON" if mirror else "Right hand | mirror OFF"
         status = f"Selected: {setting} | {w}x{h} | {fps:.0f} fps"
         cv2.putText(frame, status, (10, 70), FONT, 0.5, (255, 255, 255), 1)
-        cv2.putText(frame, "m: switch hand   c: control   d: live/dry run   q: quit",
+        cv2.putText(frame, "m: hand   c: control   d: live/dry   p: player   q: quit",
                     (10, h - 12), FONT, 0.5, (255, 255, 255), 1)
 
         cv2.imshow("GestureFlow - live prediction", frame)
@@ -124,6 +127,14 @@ with HandLandmarker.create_from_options(options) as landmarker:
             controller.backend = system_backend if live else dry_run_backend
             stabilizer = GestureStabilizer()
             print("LIVE system control" if live else "Dry run", flush=True)
+        elif key == ord("p"):
+            choices = [None, *available_players()]
+            index = choices.index(player) if player in choices else -1
+            player = choices[(index + 1) % len(choices)]
+            system_backend, tools = make_system_backend(volume_step, player=player)
+            controller.backend = system_backend if live else dry_run_backend
+            stabilizer = GestureStabilizer()
+            print("Media player:", player or "auto", flush=True)
         elif key == ord("m"):
             mirror = not mirror
             stabilizer = GestureStabilizer()
