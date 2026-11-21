@@ -10,7 +10,7 @@ import joblib
 import mediapipe as mp
 import pandas as pd
 
-from features import landmarks_to_features
+from features import FEATURE_NAMES, landmarks_to_features
 from smoothing import GestureStabilizer
 
 LABELS = ["Open", "Close", "Pointer", "Ok", "Nice"]
@@ -105,6 +105,7 @@ phase, phase_start = "wait", time.monotonic()      # wait -> countdown -> record
 seg_idx = 0
 stab = GestureStabilizer()
 size = None
+frame_rows = []
 
 with HandLandmarker.create_from_options(options) as landmarker:
     while seg_idx < len(segments):
@@ -120,7 +121,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
         timestamp_ms = max(timestamp_ms + 1, time.monotonic_ns() // 1_000_000)
         result = landmarker.detect_for_video(mp_image, timestamp_ms)
 
-        label, conf = None, 0.0
+        label, conf, feats, probs = None, 0.0, None, None
         if result.hand_landmarks:
             hand = result.hand_landmarks[0]
             for lm in hand:
@@ -139,6 +140,9 @@ with HandLandmarker.create_from_options(options) as landmarker:
             stab = GestureStabilizer()           # fresh votes for each gesture
         elif phase == "record":
             seg.frames_total += 1
+            if feats is not None and probs is not None:
+                frame_rows.append([args.person, args.hand, seg.title, round(now - phase_start, 3),
+                                   *feats.tolist(), *probs.tolist(), label])
             if label is not None:
                 seg.frames_hand += 1
                 seg.counts[label] += 1
@@ -221,3 +225,11 @@ with open(path, "w") as f:
         "confusion_pct": pct.to_dict(),
     }, f, indent=2)
 print(f"\nSaved {path}")
+
+done_titles = {s.title for s in done}
+frame_rows = [row for row in frame_rows if row[2] in done_titles]
+cols = (["person", "hand", "segment", "t"] + FEATURE_NAMES
+        + [f"p_{LABELS[c]}" for c in classes] + ["predicted"])
+frames_path = f"reports/live_frames_{args.person}_{args.hand}.csv"
+pd.DataFrame(frame_rows, columns=cols).to_csv(frames_path, index=False)
+print(f"Saved {frames_path} ({len(frame_rows)} frames)")
