@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GestureFlow</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;color:#ecf2f6;background:#10151b}
+*{box-sizing:border-box}body{margin:0}header,main{max-width:1180px;margin:auto;padding:20px}
+header{border-bottom:1px solid #384654}h1{font-size:26px;margin:0}h2{font-size:17px;margin:0 0 12px}
+main{display:grid;grid-template-columns:3fr 2fr;gap:18px}section{min-width:0}
+article{background:#1d2630;border:1px solid #34404b;border-radius:12px;padding:18px;margin-bottom:16px}
+img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain;background:#10151b;border-radius:6px}
+#stable{font-size:34px;color:#68e5b6}p,li,label{line-height:1.5}p{margin:8px 0}
+.row{display:grid;align-items:center;grid-template-columns:58px 1fr 44px;gap:8px;margin:6px 0}
+progress{width:100%;accent-color:#68e5b6}fieldset{border:0;padding:0;margin:12px 0}
+label{margin-right:12px}input{max-width:100%}button{padding:7px 14px;border-radius:6px;cursor:pointer}
+ul{padding-left:20px;margin:6px 0}.muted{color:#b6c4d1}@media(max-width:760px){main{grid-template-columns:1fr}}
+</style></head>
+<body><header><h1>GestureFlow</h1></header><main>
+<section><article><h2>Live camera</h2><img src="/video_feed" alt="Webcam preview with hand landmarks"><p class="muted" id="camera">Connecting…</p></article>
+<article><h2>Predict from a photo</h2><p class="muted">Choose a selfie-view hand photo and select the matching hand.</p>
+<input id="photo" type="file" accept="image/*" aria-label="Hand photo"><button id="predict">Predict</button><p role="status" id="result"></p></article></section>
+<section><article><h2>Current gesture</h2><strong id="stable">—</strong><p id="raw">No hand</p>
+{% for label in labels %}<div class="row"><label for="bar-{{label}}">{{label}}</label><progress id="bar-{{label}}" max="100" value="0"></progress><span id="pct-{{label}}">0%</span></div>{% endfor %}</article>
+<article><h2>Controls</h2><label><input type="checkbox" id="enabled"> Media control</label><label><input type="checkbox" disabled> LIVE (unavailable)</label>
+<fieldset><legend>Hand</legend>{% for side in ['right','left'] %}<label><input type="radio" name="hand" value="{{side}}" {% if side=='right' %}checked{% endif %}> {{side|capitalize}}</label>{% endfor %}</fieldset>
+<p class="muted">Dry run logs the action each gesture would perform.</p></article>
+<article><h2>Gesture mapping</h2><ul>{% for g,a in mapping.items() %}<li>{{g}} → {{(a or 'no action')|replace('_',' ')}}</li>{% endfor %}</ul></article>
+<article><h2>Action log</h2><ul id="log"><li>No actions yet</li></ul></article></section></main>
+<script>
+const el = id => document.getElementById(id);
+const labels = {{labels|tojson}};
+function render(s) {
+  el('camera').textContent = 'Camera '+s.camera+' · '+s.fps+' fps';
+  el('stable').textContent = s.stable || '—';
+  el('raw').textContent = s.gesture ? s.gesture+' · '+Math.round(s.confidence*100)+'% confidence' : 'No hand';
+  for (const label of labels) {
+    const pct=Math.round((s.probabilities[label] || 0)*100);
+    el('bar-'+label).value=pct;
+    el('pct-'+label).textContent=pct+'%';
+  }
+  el('enabled').checked=s.control_enabled;
+  document.querySelector('input[value="'+s.hand+'"]').checked=true;
+  const entries=s.actions.map(a => a.time+' · '+a.gesture+' → '+a.action.replaceAll('_',' ')+' ('+a.mode+')');
+  el('log').replaceChildren(...(entries.length?entries:['No actions yet']).map(text=>{
+    const li=document.createElement('li'); li.textContent=text; return li;
+  }));
+}
+async function poll() {
+  try {render(await (await fetch('/api/state')).json());}
+  catch {el('camera').textContent='Server unavailable';}
+  setTimeout(poll,250);
+}
+async function update(body) {
+  const r=await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.ok) render(await r.json());
+}
+el('enabled').onchange=e=>update({enabled:e.target.checked});
+document.querySelectorAll('[name=hand]').forEach(r=>r.onchange=()=>update({hand:r.value}));
+el('predict').onclick=async()=>{
+  const file=el('photo').files[0];
+  if(!file){el('result').textContent='Choose a photo first.';return;}
+  const form=new FormData();form.append('image',file);
+  form.append('hand',document.querySelector('[name=hand]:checked').value);
+  try {
+    const r=await fetch('/api/predict',{method:'POST',body:form});
+    const data=await r.json();
+    el('result').textContent=data.error || (data.hand_found ? data.gesture+' · '+Math.round(data.confidence*100)+'%' : 'No hand found.');
+  } catch {el('result').textContent='Image upload failed.';}
+};
+poll();
+</script></body></html>
