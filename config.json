@@ -1,0 +1,11 @@
+{
+  "mapping": {
+    "Open": "play_pause",
+    "Close": "mute",
+    "Nice": "next_track",
+    "Pointer": "volume_up",
+    "Ok": "volume_down"
+  },
+  "cooldown_seconds": 1.5,
+  "repeat_interval_seconds": 0.3
+}

@@ -1,3 +1,4 @@
+import json
 import time
 
 import cv2
@@ -5,6 +6,7 @@ import joblib
 import mediapipe as mp
 import pandas as pd
 
+from actions import ActionController, dry_run_backend
 from features import landmarks_to_features
 from smoothing import GestureStabilizer
 
@@ -35,6 +37,11 @@ options = HandLandmarkerOptions(
 
 cap = cv2.VideoCapture(0)
 stabilizer = GestureStabilizer()
+with open("config.json") as config_file:
+    cfg = json.load(config_file)
+controller = ActionController(cfg["mapping"], dry_run_backend,
+                              cooldown=cfg["cooldown_seconds"],
+                              repeat_interval=cfg["repeat_interval_seconds"])
 mirror = False
 timestamp_ms = 0
 last_time = time.monotonic()
@@ -80,6 +87,9 @@ with HandLandmarker.create_from_options(options) as landmarker:
         active, triggered = stabilizer.update(raw_label, confidence, now)
         if triggered:
             print(f"TRIGGER: {active}", flush=True)
+        controller.update(active, triggered, now)
+        state = "ON (dry run)" if controller.enabled else "OFF"
+        cv2.putText(frame, f"CONTROL: {state}", (10, h - 40), FONT, 0.6, (0, 165, 255), 2)
         cv2.putText(frame, f"STABLE: {active or '-'}", (w - 260, 40),
                     FONT, 0.9, (0, 255, 255), 2)
         fps = 0.9 * fps + 0.1 / max(now - last_time, 1e-6)
@@ -89,13 +99,16 @@ with HandLandmarker.create_from_options(options) as landmarker:
         setting = "Left hand | mirror ON" if mirror else "Right hand | mirror OFF"
         status = f"Selected: {setting} | {w}x{h} | {fps:.0f} fps"
         cv2.putText(frame, status, (10, 70), FONT, 0.5, (255, 255, 255), 1)
-        cv2.putText(frame, "m: switch hand   q: quit",
+        cv2.putText(frame, "m: switch hand   c: toggle control   q: quit",
                     (10, h - 12), FONT, 0.5, (255, 255, 255), 1)
 
         cv2.imshow("GestureFlow - live prediction", frame)
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             break
+        elif key == ord("c"):
+            controller.enabled = not controller.enabled
+            stabilizer = GestureStabilizer()
         elif key == ord("m"):
             mirror = not mirror
             stabilizer = GestureStabilizer()
