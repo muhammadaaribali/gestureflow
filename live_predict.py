@@ -1,3 +1,4 @@
+import argparse
 import json
 import time
 
@@ -13,6 +14,10 @@ from smoothing import GestureStabilizer
 
 LABELS = ["Open", "Close", "Pointer", "Ok", "Nice"]
 FONT = cv2.FONT_HERSHEY_SIMPLEX
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--player", help="Target a specific player, e.g. spotify")
+args = parser.parse_args()
 
 model = joblib.load("models/best_model.joblib")
 classes = [int(c) for c in model.classes_]
@@ -43,7 +48,7 @@ with open("config.json") as config_file:
 controller = ActionController(cfg["mapping"], dry_run_backend,
                               cooldown=cfg["cooldown_seconds"],
                               repeat_interval=cfg["repeat_interval_seconds"])
-system_backend, tools = make_system_backend(cfg.get("volume_step_percent", 3))
+system_backend, tools = make_system_backend(cfg.get("volume_step_percent", 3), player=args.player)
 print("System tools:", tools, flush=True)
 live = False
 mirror = False
@@ -94,7 +99,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
         controller.update(active, triggered, now)
         mode = "LIVE" if live else "dry run"
         state = f"ON ({mode})" if controller.enabled else "OFF"
-        cv2.putText(frame, f"CONTROL: {state}", (10, h - 40), FONT, 0.6, (0, 165, 255), 2)
+        cv2.putText(frame, f"CONTROL: {state} | player: {args.player or 'auto'}", (10, h - 40), FONT, 0.6, (0, 165, 255), 2)
         cv2.putText(frame, f"STABLE: {active or '-'}", (w - 260, 40),
                     FONT, 0.9, (0, 255, 255), 2)
         fps = 0.9 * fps + 0.1 / max(now - last_time, 1e-6)

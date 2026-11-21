@@ -1,9 +1,10 @@
 """Control media and system audio from a Linux desktop session."""
 import shutil
 import subprocess
+import time
 
 
-def make_system_backend(volume_step=3):
+def make_system_backend(volume_step=3, player=None):
     if not isinstance(volume_step, int) or not 1 <= volume_step <= 100:
         raise ValueError("volume_step_percent must be an integer from 1 to 100")
 
@@ -51,10 +52,29 @@ def make_system_backend(volume_step=3):
                     return (players[player] == "Playing", players[player] == "Paused",
                             player == last_player)
 
-                target = max(players, key=priority)
-                command = ["playerctl", "-p", target, command[1]]
+                target = player or max(players, key=priority)
+                if target not in players:
+                    print(f"[NO PLAYER] {target} is unavailable", flush=True)
+                    return False
+                operation = command[1]
+                if action == "play_pause":
+                    operation = "pause" if players[target] == "Playing" else "play"
+                command = ["playerctl", "-p", target, operation]
             subprocess.run(command, check=True, timeout=1, capture_output=True)
             if command[0] == "playerctl":
+                if action == "play_pause":
+                    expected = "Paused" if operation == "pause" else "Playing"
+                    for attempt in range(5):
+                        status = subprocess.check_output(
+                            ["playerctl", "-p", target, "status"], text=True, timeout=1
+                        ).strip()
+                        if status == expected:
+                            break
+                        time.sleep(0.05)
+                    else:
+                        print(f"[FAILED] {target} reported {status}, expected {expected}", flush=True)
+                        return False
+                    print(f"{target}: {players[target]} -> {status}", flush=True)
                 last_player = target
         except (OSError, subprocess.SubprocessError) as error:
             print(f"[FAILED] {action}: {error}", flush=True)
