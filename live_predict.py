@@ -6,6 +6,7 @@ import mediapipe as mp
 import pandas as pd
 
 from features import landmarks_to_features
+from smoothing import GestureStabilizer
 
 LABELS = ["Open", "Close", "Pointer", "Ok", "Nice"]
 FONT = cv2.FONT_HERSHEY_SIMPLEX
@@ -33,9 +34,10 @@ options = HandLandmarkerOptions(
 )
 
 cap = cv2.VideoCapture(0)
+stabilizer = GestureStabilizer()
 mirror = False
 timestamp_ms = 0
-last_time = time.time()
+last_time = time.monotonic()
 fps = 0.0
 
 with HandLandmarker.create_from_options(options) as landmarker:
@@ -52,6 +54,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
         timestamp_ms += 33
         result = landmarker.detect_for_video(mp_image, timestamp_ms)
 
+        raw_label, confidence = None, 0.0
         title = "no hand"
         probs = None
         if result.hand_landmarks:
@@ -65,14 +68,20 @@ with HandLandmarker.create_from_options(options) as landmarker:
 
         if probs is not None:
             best = int(probs.argmax())
-            title = f"{LABELS[classes[best]]}  {probs[best] * 100:.0f}%"
+            raw_label, confidence = LABELS[classes[best]], float(probs[best])
+            title = f"{raw_label}  {confidence:.0%}"
             for i, c in enumerate(classes):
                 y0 = 90 + i * 28
                 cv2.rectangle(frame, (10, y0), (10 + int(probs[i] * 200), y0 + 18), (0, 200, 0), -1)
                 cv2.putText(frame, f"{LABELS[c]} {probs[i] * 100:.0f}%", (220, y0 + 15),
                             FONT, 0.5, (255, 255, 255), 1)
 
-        now = time.time()
+        now = time.monotonic()
+        active, triggered = stabilizer.update(raw_label, confidence, now)
+        if triggered:
+            print(f"TRIGGER: {active}", flush=True)
+        cv2.putText(frame, f"STABLE: {active or '-'}", (w - 260, 40),
+                    FONT, 0.9, (0, 255, 255), 2)
         fps = 0.9 * fps + 0.1 / max(now - last_time, 1e-6)
         last_time = now
 
@@ -89,6 +98,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
             break
         elif key == ord("m"):
             mirror = not mirror
+            stabilizer = GestureStabilizer()
 
 cap.release()
 cv2.destroyAllWindows()
