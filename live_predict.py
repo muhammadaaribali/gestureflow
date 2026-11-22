@@ -12,7 +12,7 @@ from backends import available_players, make_system_backend
 from features import landmarks_to_features
 from smoothing import GestureStabilizer
 
-LABELS = ["Open", "Close", "Pointer", "Ok", "Nice"]
+LABELS = ["Open", "Close", "Pointer", "Ok", "Nice", "Idle"]
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 parser = argparse.ArgumentParser()

@@ -13,7 +13,8 @@ import pandas as pd
 from features import FEATURE_NAMES, landmarks_to_features
 from smoothing import GestureStabilizer
 
-LABELS = ["Open", "Close", "Pointer", "Ok", "Nice"]
+LABELS = ["Open", "Close", "Pointer", "Ok", "Nice", "Idle"]
+GESTURES = LABELS[:5]
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 HINTS = {
     "Open": "open palm, fingers up",
@@ -55,7 +56,7 @@ class Segment:
         self.triggers = Counter()      # gestures the stabilizer confirmed
 
 
-segments = [Segment(name.upper(), name, HINTS[name]) for name in LABELS]
+segments = [Segment(name.upper(), name, HINTS[name]) for name in GESTURES]
 segments.append(Segment("IDLE", None, HINTS["IDLE"]))
 
 
@@ -76,6 +77,7 @@ def summarize(seg):
         out["correct_triggers"] = seg.triggers[seg.target]
         out["wrong_triggers"] = sum(seg.triggers.values()) - seg.triggers[seg.target]
     else:
+        out["idle_frames_pct"] = 100 * seg.counts["Idle"] / max(hand, 1)
         out["false_triggers"] = sum(seg.triggers.values())
     return out
 

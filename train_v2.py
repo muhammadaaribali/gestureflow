@@ -1,5 +1,6 @@
 """Train a six-class GestureFlow model and evaluate it on separate recordings."""
 import argparse
+import json
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -90,7 +91,7 @@ def main():
     print(mix.to_string())
     print(f"Held-out Idle: {len(takes)} takes, {len(idle_test)} frames")
     print("Held-out take IDs:", ", ".join(takes))
-    v1 = joblib.load(ROOT / "models/best_model.joblib")
+    v1 = joblib.load(ROOT / "models/model_v1.joblib")
     v2 = clone(v1)
     X = pd.concat([zen[FEATURE_NAMES], train[FEATURE_NAMES]], ignore_index=True)
     y = np.concatenate([zen["label"], train["y"]])
@@ -105,6 +106,7 @@ def main():
             temporary.replace(destination)
         finally:
             temporary.unlink(missing_ok=True)
+        (destination.parent / "v2_heldout_takes.json").write_text(json.dumps(takes, indent=2) + "\n")
         print("Saved", destination)
 
 

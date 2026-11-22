@@ -20,6 +20,13 @@ if __name__ == "__main__":
     check("held gesture fires once", palm * 45, ["Open"], "Open")
     check("single-frame glitch is ignored", palm * 15 + fist + palm * 15, ["Open"], "Open")
     check("low confidence never fires", [("Ok", 0.5)] * 30, [], None)
-    check("hand loss clears the gesture", palm * 20 + missing * 10, ["Open"], None)
+    check("hand loss clears the gesture", palm * 20 + missing * 20, ["Open"], None)
     check("switching gesture fires once each", palm * 20 + fist * 30, ["Open", "Close"], "Close")
     check("hand removed before confirmation", palm * 16 + missing * 10, [], None)
+    check("a 0.2 s detection gap does not re-trigger a held gesture",
+          palm * 20 + missing * 6 + palm * 20, ["Open"], "Open")
+    check("a 1 s gap releases the gesture and it can fire again",
+          palm * 20 + missing * 30 + palm * 20, ["Open", "Open"], "Open")
+    idle = [("Idle", 0.99)]
+    check("Idle predictions never fire", idle * 45, [], None)
+    check("switching to Idle releases the gesture", palm * 20 + idle * 20, ["Open"], None)

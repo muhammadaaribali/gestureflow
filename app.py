@@ -19,7 +19,7 @@ from features import landmarks_to_features
 from smoothing import GestureStabilizer
 
 ROOT = Path(__file__).resolve().parent
-LABELS = ["Open", "Close", "Pointer", "Ok", "Nice"]
+LABELS = ["Open", "Close", "Pointer", "Ok", "Nice", "Idle"]
 cfg = json.loads((ROOT / "config.json").read_text())
 model = joblib.load(ROOT / "models/best_model.joblib")
 vision = mp.tasks.vision
