@@ -22,6 +22,7 @@ HINTS = {
     "Pointer": "index finger pointing, angled up and to the side",
     "Ok": "thumb and index tips touching, other three fingers up",
     "Nice": "thumbs-up, forearm roughly horizontal",
+    "FIDGET": "move casually: show 2, 3 or 4 fingers, wiggle, change poses (avoid the 5 gestures)",
     "IDLE": "relax your hand in view and make NO gesture",
 }
 
@@ -58,6 +59,7 @@ class Segment:
 
 segments = [Segment(name.upper(), name, HINTS[name]) for name in GESTURES]
 segments.append(Segment("IDLE", None, HINTS["IDLE"]))
+segments.append(Segment("FIDGET", None, HINTS["FIDGET"]))
 
 
 def summarize(seg):
@@ -169,7 +171,7 @@ with HandLandmarker.create_from_options(options) as landmarker:
             cv2.putText(frame, str(n), (w // 2 - 40, h // 2 + 40), FONT, 4, (0, 255, 255), 6)
         else:
             put(frame, f"RECORDING: {seg.title}", 35, 0.9, (0, 0, 255))
-            put(frame, "hold it, slowly vary angle and distance", 70, 0.6)
+            put(frame, seg.hint if seg.target is None else "hold it, slowly vary angle and distance", 70, 0.6)
             frac = min((now - phase_start) / args.seconds, 1.0)
             cv2.rectangle(frame, (15, h - 32), (w - 15, h - 12), (255, 255, 255), 1)
             cv2.rectangle(frame, (15, h - 32), (15 + int((w - 30) * frac), h - 12), (0, 0, 255), -1)
@@ -203,9 +205,8 @@ for r in gest_rows:
     print(f"{r['target']:<10}{r['hand_detected_pct']:>9.0f}%{r['frame_accuracy_pct']:>10.1f}%"
           f"{r['mean_confidence'] * 100:>10.0f}%{r['correct_triggers']:>14}{r['wrong_triggers']:>12}")
 print(f"\nOverall frame accuracy (frames with a hand): {overall:.1f}%")
-if idle_rows:
-    r = idle_rows[0]
-    print(f"Idle: {r['false_triggers']} false trigger(s) in {args.seconds:.0f} s with a relaxed hand; "
+for r in idle_rows:
+    print(f"{r['gesture']}: {r['false_triggers']} false trigger(s) in {args.seconds:.0f} s; "
           f"frames predicted as: {r['predicted_counts']}")
 
 matrix = pd.DataFrame(

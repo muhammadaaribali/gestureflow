@@ -11,7 +11,7 @@ from smoothing import GestureStabilizer
 
 LABELS = ["Open", "Close", "Pointer", "Ok", "Nice", "Idle"]
 SEGMENT_TO_LABEL = {"OPEN": "Open", "CLOSE": "Close", "POINTER": "Pointer",
-                    "OK": "Ok", "NICE": "Nice", "IDLE": "Idle"}
+                    "OK": "Ok", "NICE": "Nice", "IDLE": "Idle", "FIDGET": "Idle"}
 LIVE_SECONDS = 15
 
 model = joblib.load("models/model_v2.joblib")

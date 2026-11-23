@@ -80,7 +80,7 @@ def main():
         sets["B held-out Idle"] = idle_test
     for path in sorted((ROOT / "reports").glob("live_frames_*.csv")):
         live = pd.read_csv(path)
-        live["y"] = live["segment"].str.capitalize().map(IDS.__getitem__)
+        live["y"] = live["segment"].replace({"FIDGET": "IDLE"}).str.capitalize().map(IDS.__getitem__)
         sets["C " + path.stem.removeprefix("live_frames_")] = live
     if args.holdout_person:
         sets["D " + args.holdout_person] = person_test
