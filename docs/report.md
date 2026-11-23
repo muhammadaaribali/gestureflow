@@ -57,4 +57,4 @@ The Flask dashboard displays the webcam feed, landmarks, probabilities and actio
 
 ## 8. Submission materials
 
-The repository contains the source, trained models, pinned environment, figures and recorded evaluation outputs. The demo video link is pending recording and upload. [Source code](https://github.com/muhammadaaribali/gestureflow) · [Demo checklist](demo_checklist.md)
+The repository contains the source, trained models, pinned environment, figures and recorded evaluation outputs. [Watch the demo (2:04, silent MP4)](https://raw.githubusercontent.com/muhammadaaribali/gestureflow/v1.0/docs/media/gestureflow-demo.mp4) · [Source code](https://github.com/muhammadaaribali/gestureflow) · [Demo checklist](demo_checklist.md)

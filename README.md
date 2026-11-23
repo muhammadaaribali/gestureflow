@@ -10,11 +10,11 @@ GestureFlow is a university AI project that uses a webcam to control playback an
 | Muhammad Shafay Naeem | 24p-3089 |
 | Muhammad Abdullah | 24p-3041 |
 
-[Project report](docs/report.md) · Demo video pending.
+[Project report](docs/report.md) · [Watch the demo (2:04, silent MP4)](https://raw.githubusercontent.com/muhammadaaribali/gestureflow/v1.0/docs/media/gestureflow-demo.mp4)
 
 ## Quick start on Linux
 
-The project was tested with Python 3.11.16. The repository includes the trained classifier and MediaPipe hand landmarker. From a regular desktop terminal with [uv](https://docs.astral.sh/uv/) installed, run:
+The project was tested with Python 3.11.16. The repository includes the trained classifier and MediaPipe hand landmarker. From an Ubuntu desktop terminal or the VS Code integrated terminal with [uv](https://docs.astral.sh/uv/) installed, run:
 
 ```bash
 git clone https://github.com/muhammadaaribali/gestureflow.git
@@ -25,7 +25,7 @@ uv pip install -r requirements.txt
 python app.py
 ```
 
-Open [the local dashboard](http://127.0.0.1:5000). For real playback control on Ubuntu, install `playerctl` with `sudo apt install playerctl` and start an MPRIS-compatible player such as Spotify or VLC. Browser media sessions can also appear in the player list. System volume uses `wpctl`, with `pactl` or `amixer` as fallbacks. During development, the VS Code Snap terminal restricted access to Spotify over D-Bus. A regular terminal worked.
+Open [the local dashboard](http://127.0.0.1:5000). For real playback control on Ubuntu, install `playerctl` with `sudo apt install playerctl` and start an MPRIS-compatible player such as Spotify or VLC. Browser media sessions can also appear in the player list. System volume uses `wpctl`, with `pactl` or `amixer` as fallbacks. When launched from the VS Code Snap terminal, the app uses a systemd user service to reach Spotify and streams logs into the terminal. Press Ctrl+C to stop the dashboard.
 
 ## Using the dashboard
 

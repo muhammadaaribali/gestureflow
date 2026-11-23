@@ -1,10 +1,23 @@
 """Local GestureFlow dashboard."""
 import json
+import os
+import sys
 import re
 import threading
 import time
 from collections import deque
 from pathlib import Path
+
+# The VS Code Snap session can see the camera but fail to control Spotify.
+if (
+    __name__ == "__main__"
+    and sys.platform.startswith("linux")
+    and os.environ.get("TERM_PROGRAM") == "vscode"
+    and ("GIO_MODULE_DIR_VSCODE_SNAP_ORIG" in os.environ or os.environ.get("SNAP_NAME") == "code")
+    and os.environ.get("GESTUREFLOW_DESKTOP_SESSION") != "1"
+):
+    launcher = Path(__file__).resolve().with_name("start-vscode.sh")
+    os.execl("/bin/sh", "sh", str(launcher))
 
 import cv2
 import joblib
