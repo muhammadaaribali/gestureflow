@@ -8,6 +8,9 @@ GestureFlow is a university AI project that uses a webcam to control playback an
 |---|---|
 | Muhammad Aarib Ali | 24p-3036 |
 | Muhammad Shafay Naeem | 24p-3089 |
+| Muhammad Abdullah | 24p-3041 |
+
+[Project report](docs/report.md) · Demo video pending.
 
 ## Quick start on Linux
 
